@@ -1,2 +1,3 @@
-# Chatgpt-Clone
-A clone for chatgpt using OpenAI Api
+<p align="center">
+<img src="repoAsset.webp" />
+</p>
