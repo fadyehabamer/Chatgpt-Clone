@@ -188,6 +188,8 @@ section.cs-message--outgoing {
 
 .cs-chat-container .cs-message-input{
   border: none;
+  position: fixed;
+    bottom: 0;
 }
 .cs-main-container{
   border: none;
