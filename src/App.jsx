@@ -21,9 +21,14 @@ function App() {
   ]);
   const [isTyping, setIsTyping] = useState(false);
 
-  const handleSend = async (message) => {
+  // MessageInput passes (innerHTML, textContent, innerText). Use the plain
+  // text so markup typed by the user is not sent to the model as HTML.
+  const handleSend = async (_html, _textContent, innerText) => {
+    const text = innerText.trim();
+    if (!text) return;
+
     const newMessage = {
-      message,
+      message: text,
       direction: 'outgoing',
       sender: 'user',
     };
@@ -97,7 +102,8 @@ function App() {
               }
             >
               {messages.map((message, i) => {
-                return <Message key={i} model={message} />;
+                // Render as plain text: model output must never be injected as HTML.
+                return <Message key={i} model={{ ...message, type: 'text' }} />;
               })}
             </MessageList>
             <MessageInput placeholder="Type message here" onSend={handleSend} />
