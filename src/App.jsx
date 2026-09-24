@@ -11,15 +11,6 @@ import {
   TypingIndicator,
 } from '@chatscope/chat-ui-kit-react';
 
-const API_KEY = process.env.REACT_APP_API_KEY;
-// "Explain things like you would to a 10 year old learning how to code."
-const systemMessage = {
-  //  Explain things like you're talking to a software professional with 5 years of experience.
-  role: 'system',
-  content:
-    "Explain things like you're talking to a software professional with 2 years of experience.",
-};
-
 function App() {
   const [messages, setMessages] = useState([
     {
@@ -30,78 +21,59 @@ function App() {
   ]);
   const [isTyping, setIsTyping] = useState(false);
 
-  const handleSend = async (message) => {
+  // MessageInput passes (innerHTML, textContent, innerText). Use the plain
+  // text so markup typed by the user is not sent to the model as HTML.
+  const handleSend = async (_html, _textContent, innerText) => {
+    const text = innerText.trim();
+    if (!text || isTyping) return;
+
     const newMessage = {
-      message,
+      message: text,
       direction: 'outgoing',
       sender: 'user',
     };
 
     const newMessages = [...messages, newMessage];
-
     setMessages(newMessages);
-
-    // Initial system message to determine ChatGPT functionality
-    // How it responds, how it talks, etc.
     setIsTyping(true);
-    await processMessageToChatGPT(newMessages);
+
+    try {
+      const reply = await requestReply(newMessages);
+      setMessages([...newMessages, { message: reply, sender: 'ChatGPT' }]);
+    } catch (err) {
+      enqueueSnackbar(err.message, { variant: 'error' });
+    } finally {
+      // Always clear the indicator, otherwise a failed request leaves
+      // "ChatGPT is typing" on screen forever.
+      setIsTyping(false);
+    }
   };
 
-  async function processMessageToChatGPT(chatMessages) {
-    // messages is an array of messages
-    // Format messages for chatGPT API
-    // API is expecting objects in format of { role: "user" or "assistant", "content": "message here"}
-    // So we need to reformat
+  async function requestReply(chatMessages) {
+    // Convert UI messages into the { role, content } shape the server expects.
+    const apiMessages = chatMessages.map((messageObject) => ({
+      role: messageObject.sender === 'ChatGPT' ? 'assistant' : 'user',
+      content: messageObject.message,
+    }));
 
-    let apiMessages = chatMessages.map((messageObject) => {
-      let role = '';
-      if (messageObject.sender === 'ChatGPT') {
-        role = 'assistant';
-      } else {
-        role = 'user';
-      }
-      return { role: role, content: messageObject.message };
-    });
-
-    // Get the request body set up with the model we plan to use
-    // and the messages which we formatted above. We add a system message in the front to'
-    // determine how we want chatGPT to act.
-    const apiRequestBody = {
-      model: 'gpt-3.5-turbo',
-      messages: [
-        systemMessage, // The system message DEFINES the logic of our chatGPT
-        ...apiMessages, // The messages from our chat with ChatGPT
-      ],
-    };
-
-    await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + API_KEY,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(apiRequestBody),
-    })
-      .then((data) => {
-        return data.json();
-      })
-      .then((data) => {
-        // console.log(data);
-        setMessages([
-          ...chatMessages,
-          {
-            message: data.choices[0].message.content,
-            sender: 'ChatGPT',
-          },
-        ]);
-        setIsTyping(false);
-      })
-      .catch((err) => {
-        enqueueSnackbar(
-          'Error happened , please try to submit response again ',
-          { variant: 'error' }
-        );
+    // The server holds the OpenAI key and adds the system instructions,
+    // so the browser only sends the conversation itself.
+    let res;
+    try {
+      res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: apiMessages }),
       });
+    } catch {
+      throw new Error('Could not reach the server. Check your connection and try again.');
+    }
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || typeof data.reply !== 'string') {
+      throw new Error(data.error || 'Something went wrong, please try again.');
+    }
+    return data.reply;
   }
 
   return (
@@ -118,10 +90,21 @@ function App() {
               }
             >
               {messages.map((message, i) => {
-                return <Message key={i} model={message} />;
+                // Render as plain text: model output must never be injected as HTML.
+                return <Message key={i} model={{ ...message, type: 'text' }} />;
               })}
             </MessageList>
-            <MessageInput placeholder="Type message here" onSend={handleSend} />
+            <MessageInput
+              placeholder="Type message here"
+              onSend={handleSend}
+              // Block new sends until the pending reply arrives so the
+              // history sent to the server stays consistent.
+              sendDisabled={isTyping}
+              sendOnReturnDisabled={isTyping}
+              // The attach button has no handler in this app.
+              attachButton={false}
+              autoFocus
+            />
           </ChatContainer>
         </MainContainer>
       </SnackbarProvider>
