@@ -3,15 +3,23 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "dev": "vite",
+    "server": "node --watch server/index.js",
     "build": "vite build",
-    "preview": "vite preview"
+    "start": "node server/index.js",
+    "preview": "vite preview",
+    "test": "node --test server/*.test.js"
   },
   "dependencies": {
     "@chatscope/chat-ui-kit-react": "^1.10.1",
     "@chatscope/chat-ui-kit-styles": "^1.4.0",
+    "express": "^5.2.1",
     "notistack": "^3.0.1",
+    "openai": "^7.23.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

@@ -11,15 +11,6 @@ import {
   TypingIndicator,
 } from '@chatscope/chat-ui-kit-react';
 
-const API_KEY = process.env.REACT_APP_API_KEY;
-// "Explain things like you would to a 10 year old learning how to code."
-const systemMessage = {
-  //  Explain things like you're talking to a software professional with 5 years of experience.
-  role: 'system',
-  content:
-    "Explain things like you're talking to a software professional with 2 years of experience.",
-};
-
 function App() {
   const [messages, setMessages] = useState([
     {
@@ -63,34 +54,22 @@ function App() {
       return { role: role, content: messageObject.message };
     });
 
-    // Get the request body set up with the model we plan to use
-    // and the messages which we formatted above. We add a system message in the front to'
-    // determine how we want chatGPT to act.
-    const apiRequestBody = {
-      model: 'gpt-3.5-turbo',
-      messages: [
-        systemMessage, // The system message DEFINES the logic of our chatGPT
-        ...apiMessages, // The messages from our chat with ChatGPT
-      ],
-    };
-
-    await fetch('https://api.openai.com/v1/chat/completions', {
+    // The server holds the OpenAI key and adds the system instructions,
+    // so the browser only sends the conversation itself.
+    await fetch('/api/chat', {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + API_KEY,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(apiRequestBody),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: apiMessages }),
     })
-      .then((data) => {
-        return data.json();
+      .then((res) => {
+        return res.json();
       })
       .then((data) => {
         // console.log(data);
         setMessages([
           ...chatMessages,
           {
-            message: data.choices[0].message.content,
+            message: data.reply,
             sender: 'ChatGPT',
           },
         ]);
