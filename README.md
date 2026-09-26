@@ -4,6 +4,8 @@
 
 # ChatGPT Clone
 
+[![CI](https://github.com/fadyehabamer/Chatgpt-Clone/actions/workflows/ci.yml/badge.svg)](https://github.com/fadyehabamer/Chatgpt-Clone/actions/workflows/ci.yml)
+
 A ChatGPT-style chat UI built with React, Vite and
 [chat-ui-kit-react](https://github.com/chatscope/chat-ui-kit-react). Messages are
 sent to a server-side `/api/chat` endpoint that calls the OpenAI API with the
